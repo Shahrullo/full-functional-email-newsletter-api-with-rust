@@ -3,6 +3,21 @@ name = "email-nl-api-with-rust"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+# We could use any path here, but we are following the community convention
+# We could specify a library name using the `name` field. If unspecified,
+# cargo will default to `package.name`
+path = "src/lib.rs"
+name = "email_newsletter"
+
+# Notice the double square brackets: it's an array in TOML's syntax.
+# We can only have one library in a project, but we can have multiple binaries!
+# If you want to manage multiple libraries in the same repository
+# have a look at the workspace feature - we'll cover it later on.
+[[bin]]
+path = "src/main.rs"
+name = "email_newsletter"
+
 [dependencies]
 actix-web = "4.5.1"
 cargo-expand = "1.0.86"
