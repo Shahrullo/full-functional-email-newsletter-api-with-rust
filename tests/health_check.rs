@@ -1,7 +1,34 @@
 //! tests/health_check.rs
-//! 
-use "email-nl-api-with-rust"::main;
-#[test]
-fn dummy_test() {
-main()
+
+// `tokio::test` is the testing equivalent of `tokio::main`.
+// It also spares you from having to specify the `#[test]` attribute.
+//
+// You can inspect what code gets generated using
+// `cargo expand --test health_check` (<- name of the test file)
+#[tokio::test]
+async fn health_check_works() {
+    // Arrange. No .await, no .expect
+    spawn_app();
+    // We need to bring in `reqwest`
+    // to perform HTTP requests against our application.
+    let client = reqwest::Client::new();
+    // Act
+    let response = client
+        .get("http://127.0.0.1:8000/health_check")
+        .send()
+        .await
+        .expect("Failed to execute request.");
+
+    // Assert
+    assert!(response.status().is_success());
+    assert_eq!(Some(0), response.content_length());
+}
+
+// No .await call, therefore no need for `spawn_app` to be async
+fn spawn_app() {
+    let server = email_newsletter::run().expect("Failed to bind address");
+    // Launch the server as background task
+    // tokio::spawn returns a handle to the spawned future,
+    // but we have no use for it here, hence the non-binding let
+    let _ = tokio::spawn(server);
 }
