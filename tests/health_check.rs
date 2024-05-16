@@ -1,6 +1,6 @@
 //! tests/health_check.rs
 
-use std::{fmt::format, net::TcpListener};
+use std::net::TcpListener;
 
 // No .await call, therefore no need for `spawn_app` to be async
 fn spawn_app() -> String {
