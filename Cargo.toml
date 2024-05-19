@@ -21,8 +21,12 @@ name = "email_newsletter"
 [dependencies]
 actix-web = "4.5.1"
 cargo-expand = "1.0.86"
+chrono = "0.4.38"
+config = "0.14.0"
 serde = "1.0.202"
+sqlx = { version = "0.7", default-features = false, features = ["runtime-tokio-rustls", "macros", "postgres", "uuid", "chrono", "migrate"] }
 tokio = { version = "1.37.0", features = ["macros", "rt-multi-thread"] }
+uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
 reqwest = "0.12.4"
