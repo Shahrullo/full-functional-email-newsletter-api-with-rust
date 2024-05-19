@@ -21,8 +21,8 @@ pub async fn subscribe(
         VALUES ($1, $2, $3, $4)
         "#,
         Uuid::new_v4(),
-        form.email,
-        form.name,
+        _form.email,
+        _form.name,
         Utc::now()
     )
     // use `get_ref` to get an immutable reference to the `PgConnection`
