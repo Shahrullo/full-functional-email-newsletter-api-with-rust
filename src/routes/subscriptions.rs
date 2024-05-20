@@ -40,7 +40,6 @@ pub async fn subscribe(
         Utc::now()
     )
     // use `get_ref` to get an immutable reference to the `PgConnection`
-    // wrapped by `web::Data`.
     .execute(pool.get_ref())
     .instrument(query_span)
     .await
