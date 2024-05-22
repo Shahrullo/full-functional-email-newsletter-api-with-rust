@@ -1,17 +1,35 @@
 //! tests/health_check.rs
 use uuid::Uuid;
 use std::net::TcpListener;
+use once_cell::sync::Lazy;
 use sqlx::{PgPool, Connection, Executor, PgConnection};
 
 use email_newsletter::startup::run;
 use email_newsletter::configurations::{get_configuration, DatabaseSettings};
+use email_newsletter::telemetry::{get_subscriber, init_subscriber};
 
 pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
 }
 
+static TRACING: Lazy<()> = Lazy::new(|| {
+    let default_filter_level = "info".to_string();
+    let subscriber_name = "test".to_string();
+    if std::env::var("TEST_LOG").is_ok() {
+        let subscriber = get_subscriber(subscriber_name, default_filter_level, std::io::stdout);
+        init_subscriber(subscriber);
+    } else {
+        let subscriber = get_subscriber(subscriber_name, default_filter_level, std::io::sink);
+        init_subscriber(subscriber);
+    }
+});
+
 async fn spawn_app() -> TestApp {
+    // The first time `initialize` is invoked
+    // All other invocations will skip execution
+    Lazy::force(&TRACING);
+
     let listener = TcpListener::bind("127.0.0.1:0")
         .expect("Failed to bind address");
     // Retrieve the port assigned to us by the OS
