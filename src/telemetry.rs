@@ -3,17 +3,22 @@ use tracing::Subscriber;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_log::LogTracer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
+use tracing_subscriber::fmt::MakeWriter;
 
-pub fn get_subscriber(
+pub fn get_subscriber<Sink>(
     name: String,
-    env_filter: String
-) -> impl Subscriber + Send + Sync {
+    env_filter: String,
+    sink: Sink,
+) -> impl Subscriber + Send + Sync 
+where
+    Sink: for<'a> MakeWriter<'a> + Send + Sync + 'static,
+{
     // printing all logs at info-level or above
     let env_filter = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("info"));
     let formatting_layer = BunyanFormattingLayer::new(
-        "email_newsletter".into(),
-        std::io::stdout
+        name,
+        sink
     );
     Registry::default()
         .with(env_filter)

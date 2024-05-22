@@ -8,8 +8,7 @@ use email_newsletter::configurations::get_configuration;
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     // call the subscriber
-    let subscriber = get_subscriber("email_newsletter".into(), "info".into());
-    init_subscriber(subscriber);
+    let subscriber = get_subscriber("email_newsletter".into(), "info".into(), std::io::stdout);
 
     // Panic if cannot read configuration
     let configuration = get_configuration().expect("Failed to read configuration.");
