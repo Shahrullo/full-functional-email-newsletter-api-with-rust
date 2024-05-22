@@ -10,26 +10,42 @@ pub struct FormData {
     name: String,
 }
 
+#[tracing::instrument(
+    name = "Adding a new subscriber",
+    skip(_form, pool),
+    fields (
+        request_id = %Uuid::new_v4(),
+        subscriber_email = %_form.email,
+        subscriber_name = %_form.name,
+    )
+)]
 // We always return a 200 OK
 pub async fn subscribe(
     _form: web::Form<FormData>,
     // retrieving a connection from the application state
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
-    // generate a random unique identifier
-    let request_id = Uuid::new_v4();
-    let request_span = tracing::info_span!(
-        "Adding a new subscriber",
-        %request_id,
-        subscriber_email = %_form.email,
-        subscriber_name = %_form.name
-    );
-    let _request_span_guard = request_span.enter();
-    let query_span = tracing::info_span!(
-        "Saving new subscriber details in the database"
-    );
+    match insert_subscriber(&pool, &_form).await {
+        Ok(_) => {
+            tracing::info!("request_id {} - New subscriber details have been saved", request_id);
+            HttpResponse::Ok().finish()
+        },
+        Err(e) => {
+            tracing::error!("Failed to execute query: {:?}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
 
-    match sqlx::query!(
+#[tracing::instrument(
+    name = "Saving new subscriber details in the database",
+    skip(_form, pool)
+)]
+pub async fn insert_subscriber(
+    pool: &PgPool,
+    _form: &FormData,   
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
         r#"
         INSERT INTO subscriptions (id, email, name, subcsribed_at)
         VALUES ($1, $2, $3, $4)
@@ -40,17 +56,11 @@ pub async fn subscribe(
         Utc::now()
     )
     // use `get_ref` to get an immutable reference to the `PgConnection`
-    .execute(pool.get_ref())
-    .instrument(query_span)
+    .execute(pool)
     .await
-    {
-        Ok(_) => {
-            tracing::info!("request_id {} - New subscriber details have been saved", request_id);
-            HttpResponse::Ok().finish()
-        },
-        Err(e) => {
-            tracing::error!("Failed to execute query: {:?}", e);
-            HttpResponse::InternalServerError().finish()
-        }
-    }
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
+    Ok(())
 }
