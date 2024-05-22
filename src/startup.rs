@@ -1,9 +1,9 @@
 use crate::routes::{health_check, subscribe};
 use actix_web::{web, App, HttpServer};
 use actix_web::dev::Server;
-use actix_web::middleware::Logger;
 use std::net::TcpListener;
 use sqlx::PgPool;
+use tracing_actix_web::TracingLogger;
 
 // We need to mark `run` as public.
 pub fn run(
@@ -14,7 +14,7 @@ pub fn run(
     let db_pool = web::Data::new(db_pool);
     let server = HttpServer::new(move || {
         App::new()
-            .wrap(Logger::default())
+            .wrap(TracingLogger::default())
             .route("/health_check", web::get().to(health_check))
             .route("subscriptions", web::post().to(subscribe))
             // Get a pointer copy and attach it to the application state
