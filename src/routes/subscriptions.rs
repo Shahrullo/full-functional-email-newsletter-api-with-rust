@@ -1,6 +1,6 @@
 use actix_web::{web, HttpResponse};
 use sqlx::PgPool;
-use chrono::Utc;
+use chrono::{naive, Utc};
 use uuid::Uuid;
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -26,25 +26,20 @@ pub async fn subscribe(
     // retrieving a connection from the application state
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
+    let name = match SubscriberName::parse(_form.0.name) {
+        Ok(name) => name,
+        // return earily if the name is invalid, with a 400
+        Err(_) => return HttpResponse::BadRequest().finish(),
+    };
     let new_subscriber = NewSubscriber {
         email: _form.0.email,
-        name: SubscriberName::parse(_form.0.name),
+        name,
     };
     
     match insert_subscriber(&pool, &new_subscriber).await {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(_) => HttpResponse::InternalServerError().finish()
     }
-}
-
-pub fn is_valid_name(s: &str) -> bool {
-    let is_empty_or_whitespace = s.trim().is_empty();
-    let is_too_long = s.graphemes(true).count() > 256;
-    let forbidden_characters = ['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
-    let contains_forbidden_characters = s.chars().any(|g| forbidden_characters.contains(&g));
-
-    // return `false` if any of conditions have been violated
-    !(is_empty_or_whitespace || is_too_long || contains_forbidden_characters)
 }
 
 #[tracing::instrument(
