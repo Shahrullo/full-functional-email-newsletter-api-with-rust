@@ -1,10 +1,12 @@
+use std::f32::consts::E;
+
 use actix_web::{web, HttpResponse};
 use sqlx::PgPool;
 use chrono::{naive, Utc};
 use uuid::Uuid;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::domain::{NewSubscriber, SubscriberName};
+use crate::domain::{NewSubscriber, SubscriberName, SubscriberEmail};
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
@@ -31,8 +33,12 @@ pub async fn subscribe(
         // return earily if the name is invalid, with a 400
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
+    let email = match SubscriberEmail::parse(_form.0.email) {
+        Ok(email) => email,
+        Err(_) => return HttpResponse::BadRequest().finish(),
+    };
     let new_subscriber = NewSubscriber {
-        email: _form.0.email,
+        email,
         name,
     };
     
@@ -56,7 +62,7 @@ pub async fn insert_subscriber(
         VALUES ($1, $2, $3, $4)
         "#,
         Uuid::new_v4(),
-        new_subscriber.email,
+        new_subscriber.email.as_ref(),
         new_subscriber.name.as_ref(),
         Utc::now()
     )
