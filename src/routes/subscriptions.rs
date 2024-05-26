@@ -1,10 +1,7 @@
-use std::f32::consts::E;
-
 use actix_web::{web, HttpResponse};
 use sqlx::PgPool;
-use chrono::{naive, Utc};
+use chrono::Utc;
 use uuid::Uuid;
-use unicode_segmentation::UnicodeSegmentation;
 
 use crate::domain::{NewSubscriber, SubscriberName, SubscriberEmail};
 
@@ -12,6 +9,16 @@ use crate::domain::{NewSubscriber, SubscriberName, SubscriberEmail};
 pub struct FormData {
     email: String,
     name: String,
+}
+
+impl TryFrom<FormData> for NewSubscriber {
+    type Error = String;
+
+    fn try_from(value: FormData) -> Result<Self, Self::Error> {
+        let name = SubscriberName::parse(value.name)?;
+        let email = SubscriberEmail::parse(value.email)?;
+        Ok(Self {email, name })
+    }
 }
 
 #[tracing::instrument(
@@ -28,18 +35,10 @@ pub async fn subscribe(
     // retrieving a connection from the application state
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
-    let name = match SubscriberName::parse(_form.0.name) {
-        Ok(name) => name,
-        // return earily if the name is invalid, with a 400
+
+    let new_subscriber = match _form.0.try_into() {
+        Ok(subscriber) => subscriber,
         Err(_) => return HttpResponse::BadRequest().finish(),
-    };
-    let email = match SubscriberEmail::parse(_form.0.email) {
-        Ok(email) => email,
-        Err(_) => return HttpResponse::BadRequest().finish(),
-    };
-    let new_subscriber = NewSubscriber {
-        email,
-        name,
     };
     
     match insert_subscriber(&pool, &new_subscriber).await {
