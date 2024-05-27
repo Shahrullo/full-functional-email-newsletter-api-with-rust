@@ -9,6 +9,7 @@ use secrecy::ExposeSecret;
 use email_newsletter::startup::run;
 use email_newsletter::configurations::{get_configuration, DatabaseSettings};
 use email_newsletter::telemetry::{get_subscriber, init_subscriber};
+use email_newsletter::email_client::EmailClient;
 
 pub struct TestApp {
     pub address: String,
@@ -42,7 +43,20 @@ async fn spawn_app() -> TestApp {
     configuration.database.database_name = Uuid::new_v4().to_string();
     let connection_pool = configure_database(&configuration.database).await;
 
-    let server = run(listener, connection_pool.clone()).expect("Failed to bind address");
+    // Build a new email client
+    let sender_email = configuration.email_client.sender()
+        .expect("Invalid sender email address.");
+    let email_client = EmailClient::new(
+        configuration.email_client.base_url, 
+        sender_email
+    );
+
+    // pass the new client `run`
+    let server = run(
+        listener, 
+        connection_pool.clone(),
+        email_client)
+            .expect("Failed to bind address");
     // Launch the server as background task
     // tokio::spawn returns a handle to the spawned future,
     // but we have no use for it here, hence the non-binding let
