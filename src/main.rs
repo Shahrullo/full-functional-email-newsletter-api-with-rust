@@ -15,7 +15,7 @@ async fn main() -> std::io::Result<()> {
     // Panic if cannot read configuration
     let configuration = get_configuration().expect("Failed to read configuration.");
     let connection_pool = PgPoolOptions::new()
-        .connect_timeout(std::time::Duration::from_secs(2))
+        // .connect_timeout(std::time::Duration::from_secs(2))
         .connect_lazy_with(configuration.database.with_db());
     
     // Build an `EmailClient` using `configuration`
