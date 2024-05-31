@@ -8,6 +8,7 @@ use email_newsletter::telemetry::{get_subscriber, init_subscriber};
 use email_newsletter::configurations::{get_configuration, DatabaseSettings};
 
 pub struct TestApp {
+    pub port: u16,
     pub address: String,
     pub db_pool: PgPool,
     pub email_server: MockServer,
@@ -64,11 +65,12 @@ pub async fn spawn_app() -> TestApp {
     let application = Application::build(configuration.clone())
         .await
         .expect("Failed to build application.");
-    let address = format!("http://127.0.0.1:{}", application.port());
+    let application_port = application.port();
     let _ = tokio::spawn(application.run_until_stopped());
 
     TestApp {
-        address,
+        address: format!("http://localhost:{}", application_port),
+        port: application_port,
         db_pool: get_connection_pool(&configuration.database),
         email_server,
     }
