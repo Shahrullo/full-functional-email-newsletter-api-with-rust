@@ -7,7 +7,7 @@ use tracing_actix_web::TracingLogger;
 
 use crate::configurations::{DatabaseSettings, Settings};
 use crate::email_client::EmailClient;
-use crate::routes::{health_check, subscribe};
+use crate::routes::{health_check, subscribe, confirm};
 
 pub fn get_connection_pool(
     configuration: &DatabaseSettings
@@ -75,6 +75,7 @@ pub fn run(
             .wrap(TracingLogger::default())
             .route("/health_check", web::get().to(health_check))
             .route("subscriptions", web::post().to(subscribe))
+            .route("/subscriptions/confirm", web::get().to(confirm))
             // Get a pointer copy and attach it to the application state
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
