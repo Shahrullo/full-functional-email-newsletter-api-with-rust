@@ -20,6 +20,7 @@ name = "email_newsletter"
 
 [dependencies]
 actix-web = "4.5.1"
+anyhow = "1.0.86"
 cargo-expand = "1.0.86"
 chrono = "0.4.38"
 claim = "0.5.0"
@@ -31,6 +32,7 @@ secrecy = { version = "0.8.0", features = ["serde"] }
 serde = "1.0.202"
 serde-aux = "4.5.0"
 sqlx = { version = "0.7", default-features = false, features = ["runtime-tokio-rustls", "macros", "postgres", "uuid", "chrono", "migrate"] }
+thiserror = "1.0.61"
 tokio = { version = "1.37.0", features = ["macros", "rt-multi-thread"] }
 tracing = { version = "0.1.40", features = ["log"] }
 tracing-actix-web = "0.7.10"
