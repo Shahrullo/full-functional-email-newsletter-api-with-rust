@@ -12,44 +12,41 @@ pub struct EmailClient {
 
 impl EmailClient {
     pub fn new(
-            base_url: String,
-            sender: SubscriberEmail,
-            authorization_token: Secret<String>,
-            timeout: std::time::Duration,
-        ) -> Self {
-                let http_client = Client::builder()
-                    .timeout(timeout)
-                    .build()
-                    .unwrap();
+        base_url: String,
+        sender: SubscriberEmail,
+        authorization_token: Secret<String>,
+        timeout: std::time::Duration,
+    ) -> Self {
+        let http_client = Client::builder().timeout(timeout).build().unwrap();
         Self {
             http_client,
             base_url,
             sender,
-            authorization_token 
+            authorization_token,
         }
     }
     
     pub async fn send_email(
         &self,
-        recipient: SubscriberEmail,
+        recipient: &SubscriberEmail,
         subject: &str,
         html_content: &str,
-        text_content: &str
-        ) -> Result<(), reqwest::Error> {
-            let url = format!("{}/email", self.base_url);
-            let request_body = SendEmailRequest {
+        text_content: &str,
+    ) -> Result<(), reqwest::Error> {
+        let url = format!("{}/email", self.base_url);
+        let request_body = SendEmailRequest {
             from: self.sender.as_ref(),
             to: recipient.as_ref(),
-            subject: subject,
+            subject,
             html_body: html_content,
             text_body: text_content,
         };
-        self
-            .http_client
+        self.http_client
             .post(&url)
             .header(
                 "X-Postmark-Server-Token",
-                self.authorization_token.expose_secret())
+                self.authorization_token.expose_secret(),
+            )
             .json(&request_body)
             .send()
             .await?
@@ -149,7 +146,7 @@ mod tests {
 
         // Act
         let _ = email_client
-            .send_email(email(), &subject(), &content(), &content())
+            .send_email(&email(), &subject(), &content(), &content())
             .await;
 
         //Assert
@@ -170,7 +167,7 @@ mod tests {
 
         // Act
         let outcome = email_client
-            .send_email(email(), &subject(), &content(), &content())
+            .send_email(&email(), &subject(), &content(), &content())
             .await;
         
         // Assert
@@ -192,7 +189,7 @@ mod tests {
 
         // Act
         let outcome = email_client
-            .send_email(email(), &subject(), &content(), &content())
+            .send_email(&email(), &subject(), &content(), &content())
             .await;
 
         // Assert
@@ -217,7 +214,7 @@ mod tests {
 
         // Act
         let outcome = email_client
-            .send_email(email(), &subject(), &content(), &content())
+            .send_email(&email(), &subject(), &content(), &content())
             .await;
 
         // Assert
