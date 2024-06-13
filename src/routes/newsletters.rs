@@ -1,11 +1,12 @@
-use actix_web::rt::spawn;
+use core::result::Result::Ok;
 use actix_web::{web, HttpResponse, ResponseError, HttpRequest};
 use actix_web::http::{StatusCode, header};
 use actix_web::http::header::{HeaderMap, HeaderValue};
 use sqlx::PgPool;
 use secrecy::{Secret, ExposeSecret};
-use anyhow::{Ok, Context};
+use anyhow::Context;
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
+use base64::Engine;
 use crate::routes::error_chain_fmt;
 use crate::email_client::EmailClient;
 use crate::domain::SubscriberEmail;
@@ -112,16 +113,17 @@ fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, anyhow::Erro
         .context("The 'Authorization' header was missing")?
         .to_str()
         .context("The 'Authorization' header was not a valid UTF8 string.")?;
-    let base64encoded_segment = header_value
+    let base64encoded_credentials = header_value
         .strip_prefix("Basic ")
         .context("The authorization scheme was not 'Basic'.")?;
-    let decoded_bytes = base64::decode_config(base64encoded_segment, base64::STANDARD)
+    let decoded_credentials = base64::engine::general_purpose::STANDARD
+        .decode(base64encoded_credentials)
         .context("Failed to base64-decode 'Basic' credentials.")?;
-    let decoded_credentials = String::from_utf8(decoded_bytes)
-        .context("The decoded credential string is not valid UTF8.");
+    let decoded_credentials = String::from_utf8(decoded_credentials)
+        .context("The decoded credential string is valid UTF8.")?;
 
-    // Split into two segments, using ':' as delimitator
     let mut credentials = decoded_credentials.splitn(2, ':');
+
     let username = credentials
         .next()
         .ok_or_else(|| anyhow::anyhow!("A username must be provided in 'Basic' auth."))?
@@ -215,7 +217,7 @@ fn verify_password_hash(
             expected_password_hash.expose_secret()
         )
         .context("Failed to parse hash in PHC string format.")
-        .mapp_err(PublishError::UnexpectedError)?;
+        .map_err(PublishError::UnexpectedError)?;
 
     Argon2::default()
         .verify_password(
@@ -239,9 +241,9 @@ async fn get_stored_credentials(
         "#,
         username
     )
-    .fetch_optional(bool)
+    .fetch_optional(pool)
     .await
-    .context("Failed to perform a query to retrieve stored credentials.")
+    .context("Failed to perform a query to retrieve stored credentials.")?
     .map(|row| (row.user_id, Secret::new(row.password_hash)));
 
     Ok(row)

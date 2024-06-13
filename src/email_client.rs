@@ -74,7 +74,7 @@ mod tests {
     use fake::faker::lorem::en::{Paragraph, Sentence};
     use fake::{Fake, Faker};
     use secrecy::Secret;
-    use claim::{assert_ok, assert_err};
+    use claims::{assert_ok, assert_err};
     use wiremock::Request;
     use wiremock::matchers::any;
     use wiremock::matchers::{header, header_exists, path, method};

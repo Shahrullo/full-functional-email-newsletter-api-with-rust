@@ -35,7 +35,7 @@ impl TestUser {
             .hash_password(self.password.as_bytes(), &salt)
             .unwrap()
             .to_string();
-        let password_hash = format!("{:x}", password_hash);
+        // let password_hash = format!("{:x}", password_hash);
         sqlx::query!(
             "INSERT INTO users (user_id, username, password_hash)
             VALUES ($1, $2, $3)",
@@ -45,7 +45,7 @@ impl TestUser {
         )
         .execute(pool)
         .await
-        .expect("Failed to store test user.")
+        .expect("Failed to store test user.");
     }
 }
 
@@ -115,13 +115,13 @@ impl TestApp {
             .expect("Failed to execute request.")
     }
 
-    pub async fn test_user(&self) -> (String, String) {
-        let row = sqlx::query!("SELECT username, password FROM users LIMIT 1",)
-            .fetch_one(&self.db_pool)
-            .await
-            .expect("Failed to create test users.");
-        (row.username, row.password)
-    }
+    // pub async fn test_user(&self) -> (String, String) {
+    //     let row = sqlx::query!("SELECT username, password FROM users LIMIT 1",)
+    //         .fetch_one(&self.db_pool)
+    //         .await
+    //         .expect("Failed to create test users.");
+    //     (row.username, row.password)
+    // }
 }
 
 static TRACING: Lazy<()> = Lazy::new(|| {
