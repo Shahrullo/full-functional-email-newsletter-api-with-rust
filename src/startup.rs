@@ -7,7 +7,7 @@ use tracing_actix_web::TracingLogger;
 use crate::routes::home;
 use crate::configurations::{DatabaseSettings, Settings};
 use crate::email_client::EmailClient;
-use crate::routes::{health_check, subscribe, confirm, publish_newsletter};
+use crate::routes::{health_check, subscribe, confirm, publish_newsletter, login_form, login};
 
 pub fn get_connection_pool(
     configuration: &DatabaseSettings
@@ -84,6 +84,8 @@ pub fn run(
             .wrap(TracingLogger::default())
             .route("/", web::get().to(home))
             .route("/health_check", web::get().to(health_check))
+            .route("/login", web::get().to(login_form))
+            .route("/login", web::post().to(login))
             .route("subscriptions", web::post().to(subscribe))
             .route("/subscriptions/confirm", web::get().to(confirm))
             .route("/newsletters", web::post().to(publish_newsletter))
