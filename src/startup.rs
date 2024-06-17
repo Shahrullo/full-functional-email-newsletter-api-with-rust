@@ -77,7 +77,7 @@ pub fn run(
     db_pool: PgPool,
     email_client: EmailClient,
     base_url: String,
-    hmac_secret: HmacSecret,
+    hmac_secret: Secret<String>,
 ) -> Result<Server, std::io::Error> {
     // wrap the connection in a smart pointer
     let db_pool = web::Data::new(db_pool);
