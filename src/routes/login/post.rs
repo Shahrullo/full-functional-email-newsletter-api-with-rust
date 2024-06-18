@@ -3,6 +3,7 @@ use secrecy::{Secret, ExposeSecret};
 use hmac::{Hmac, Mac};
 use actix_web::{web, HttpResponse, error::InternalError};
 use actix_web::http::header::LOCATION;
+use actix_web::cookie::Cookie;
 use crate::startup::HmacSecret;
 use crate::routes::error_chain_fmt;
 use crate::authentication::{validate_credentials, Credentials, AuthError};
@@ -45,6 +46,7 @@ pub async fn login(
             let response = HttpResponse::SeeOther()
                 .insert_header((
                     LOCATION, "/login"))
+                .cookie(Cookie::new("_flash", e.to_string()))
                 .finish();
             Err(InternalError::from_response(e, response))
         }
