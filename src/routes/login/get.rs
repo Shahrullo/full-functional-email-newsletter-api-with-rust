@@ -1,7 +1,10 @@
 use hmac::{Hmac, Mac};
 use secrecy::ExposeSecret;
 use actix_web::{http::header::ContentType, web, HttpResponse, HttpRequest};
-use actix_web::cookie::{Cookie, time::Duration};
+use sqlx::error;
+use std::fmt::Write;
+use actix_web::cookie::Cookie;
+use actix_web_flash_messages::{IncomingFlashMessages, Level};
 use crate::startup::HmacSecret;
 
 #[derive(serde::Deserialize)]
@@ -26,16 +29,14 @@ impl QueryParams {
 }
 
 pub async fn login_form(
-    request: HttpRequest
+    flash_messages: IncomingFlashMessages
 ) -> HttpResponse {
-    let error_html = match request.cookie("_flash") {
-        None => "".into(),
-        Some(cookie) => {
-            format!("<p><i>{}</i></p>", cookie.value())
-        }
-    };
+    let mut error_html = String::new();
+    for m in flash_messages.iter().filter(|m| m.level() == Level::Error) {
+        writeln!(error_html, "<p><i>{}</i></p>", m.content()).unwrap();
+    }
 
-    let mut response = HttpResponse::Ok()
+    HttpResponse::Ok()
         .content_type(ContentType::html())
         .body(format!(
             r#"<!DOCTYPE html>
@@ -65,9 +66,5 @@ name="password"
 </form>
 </body>
 </html>"#,
-        ));
-    response
-        .add_removal_cookie(&Cookie::new("_flash", ""))
-        .unwrap();
-    response
+        ))
 }
