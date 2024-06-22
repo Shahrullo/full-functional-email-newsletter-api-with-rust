@@ -12,3 +12,4 @@ email_client:
   sender_email: "test@gmail.com"
   authorization_token: "my-secret-token" # only for dev case. For prod, it will be used outside of version control
   timeout_milliseconds: 10000
+redis_uri: "redis://127.0.0.1:6379"
