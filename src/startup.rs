@@ -5,7 +5,6 @@ use actix_web::dev::Server;
 use actix_web::cookie::Key;
 use actix_session::SessionMiddleware;
 use actix_session::storage::RedisSessionStore;
-use std::any;
 use std::net::TcpListener;
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use tracing_actix_web::TracingLogger;
@@ -16,6 +15,7 @@ use crate::routes::home;
 use crate::configurations::{DatabaseSettings, Settings};
 use crate::email_client::EmailClient;
 use crate::routes::{health_check, subscribe, confirm, publish_newsletter, login_form, login};
+use crate::routes::admin_dashboard;
 
 pub fn get_connection_pool(
     configuration: &DatabaseSettings
@@ -108,6 +108,7 @@ async fn run(
             .route("subscriptions", web::post().to(subscribe))
             .route("/subscriptions/confirm", web::get().to(confirm))
             .route("/newsletters", web::post().to(publish_newsletter))
+            .route("/admin/dashboard", web::get().to(admin_dashboard))
             // Get a pointer copy and attach it to the application state
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
