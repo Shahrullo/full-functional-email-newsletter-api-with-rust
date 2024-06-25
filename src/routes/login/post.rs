@@ -1,11 +1,11 @@
-use sqlx::PgPool;
+use sqlx::{PgPool, Type};
 use secrecy::{Secret, ExposeSecret};
 use hmac::{Hmac, Mac};
 use actix_web::{web, HttpResponse, error::InternalError};
 use actix_web::http::header::LOCATION;
 use actix_web::cookie::Cookie;
-use actix_session::Session;
 use actix_web_flash_messages::FlashMessage;
+use crate::session_state::TypedSession;
 use crate::startup::HmacSecret;
 use crate::routes::error_chain_fmt;
 use crate::authentication::{validate_credentials, Credentials, AuthError};
@@ -24,7 +24,7 @@ pub struct FormData {
 pub async fn login(
     form: web::Form<FormData>,
     pool: web::Data<PgPool>,
-    session: Session,
+    session: TypedSession,
 ) -> Result<HttpResponse, InternalError<LoginError>> {
 
     let credentials = Credentials {
@@ -39,7 +39,7 @@ pub async fn login(
                 .record("user_id", &tracing::field::display(&user_id));
             session.renew();
             session
-                .insert("user_id", user_id)
+                .insert_user_id(user_id)
                 .map_err(|e| login_redirect(LoginError::UnexpectedError(e.into())))?;
             Ok(HttpResponse::SeeOther()
                 .insert_header((LOCATION, "/admin/dashboard"))
