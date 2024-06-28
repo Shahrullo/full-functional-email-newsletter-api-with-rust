@@ -1,5 +1,6 @@
 //! src/lib.rs
 
+pub mod utils;
 pub mod domain;
 pub mod routes;
 pub mod startup;

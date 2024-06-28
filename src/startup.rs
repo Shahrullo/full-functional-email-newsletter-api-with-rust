@@ -12,6 +12,7 @@ use actix_web_flash_messages::FlashMessagesFramework;
 use actix_web_flash_messages::storage::CookieMessageStore;
 
 use crate::routes::home;
+use crate::routes::{change_password, change_password_form};
 use crate::configurations::{DatabaseSettings, Settings};
 use crate::email_client::EmailClient;
 use crate::routes::{health_check, subscribe, confirm, publish_newsletter, login_form, login};
@@ -109,6 +110,8 @@ async fn run(
             .route("/subscriptions/confirm", web::get().to(confirm))
             .route("/newsletters", web::post().to(publish_newsletter))
             .route("/admin/dashboard", web::get().to(admin_dashboard))
+            .route("/admin/password", web::get().to(change_password_form()))
+            .route("/admin/password", web::post().to(change_password(form)))
             // Get a pointer copy and attach it to the application state
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
