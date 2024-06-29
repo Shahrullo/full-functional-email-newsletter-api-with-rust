@@ -49,6 +49,10 @@ impl TestUser {
         .await
         .expect("Failed to store test user.");
     }
+
+    pub async fn get_change_password_html(&self) -> String {
+        self.get_change_password().await.text().await.unwrap()
+    }
 }
 
 pub struct TestApp {
