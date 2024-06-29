@@ -17,6 +17,7 @@ use crate::configurations::{DatabaseSettings, Settings};
 use crate::email_client::EmailClient;
 use crate::routes::{health_check, subscribe, confirm, publish_newsletter, login_form, login};
 use crate::routes::admin_dashboard;
+use crate::routes::log_out;
 
 pub fn get_connection_pool(
     configuration: &DatabaseSettings
@@ -112,6 +113,7 @@ async fn run(
             .route("/admin/dashboard", web::get().to(admin_dashboard))
             .route("/admin/password", web::get().to(change_password_form()))
             .route("/admin/password", web::post().to(change_password(form)))
+            .route("/admin/logout", web::post().to(log_out))
             // Get a pointer copy and attach it to the application state
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
