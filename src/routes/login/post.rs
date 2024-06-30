@@ -1,13 +1,11 @@
-use sqlx::{PgPool, Type};
-use secrecy::{Secret, ExposeSecret};
-use hmac::{Hmac, Mac};
-use actix_web::{web, HttpResponse, error::InternalError};
+use sqlx::PgPool;
+use secrecy::Secret;
 use actix_web::http::header::LOCATION;
-use actix_web::cookie::Cookie;
 use actix_web_flash_messages::FlashMessage;
-use crate::session_state::TypedSession;
-use crate::startup::HmacSecret;
+use actix_web::{web, HttpResponse, error::InternalError};
+
 use crate::routes::error_chain_fmt;
+use crate::session_state::TypedSession;
 use crate::authentication::{validate_credentials, Credentials, AuthError};
 
 

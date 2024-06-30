@@ -1,15 +1,16 @@
-use crate::domain::{NewSubscriber, SubscriberEmail, SubscriberName};
-use crate::email_client::EmailClient;
-use crate::startup::ApplicationBaseUrl;
-use actix_web::http::StatusCode;
-use actix_web::{web, HttpResponse, ResponseError};
-use anyhow::Context;
-use rand::distributions::Alphanumeric;
-use rand::{thread_rng, Rng};
-use sqlx::{Executor, PgPool, Postgres, Transaction};
-use std::convert::{TryFrom, TryInto};
 use uuid::Uuid;
 use chrono::Utc;
+use anyhow::Context;
+use rand::{thread_rng, Rng};
+use actix_web::http::StatusCode;
+use std::convert::{TryFrom, TryInto};
+use rand::distributions::Alphanumeric;
+use actix_web::{web, HttpResponse, ResponseError};
+use sqlx::{Executor, PgPool, Postgres, Transaction};
+
+use crate::email_client::EmailClient;
+use crate::startup::ApplicationBaseUrl;
+use crate::domain::{NewSubscriber, SubscriberEmail, SubscriberName};
 
 #[derive(serde::Deserialize)]
 pub struct FormData {

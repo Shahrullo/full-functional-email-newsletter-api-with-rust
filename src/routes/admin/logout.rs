@@ -1,7 +1,5 @@
 use actix_web::HttpResponse;
 use actix_web_flash_messages::FlashMessage;
-use anyhow::Ok;
-use sqlx::Type;
 
 use crate::utils::{e500, see_other};
 use crate::session_state::TypedSession;
