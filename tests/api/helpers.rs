@@ -49,18 +49,6 @@ impl TestUser {
         .await
         .expect("Failed to store test user.");
     }
-
-    pub async fn get_change_password_html(&self) -> String {
-        self.get_change_password().await.text().await.unwrap()
-    }
-
-    pub async fn post_logout(&self) -> reqwest::Response {
-        self.api_client
-            .post(&format!("{}/admin/logout", &self.address))
-            .send()
-            .await
-            .expect("Failed to execute request.")
-    }
 }
 
 pub struct TestApp {
@@ -171,6 +159,18 @@ impl TestApp {
             .expect("Failed to execute request.")
     }
 
+    pub async fn get_change_password_html(&self) -> String {
+        self.get_change_password().await.text().await.unwrap()
+    }
+
+    pub async fn post_logout(&self) -> reqwest::Response {
+        self.api_client
+            .post(&format!("{}/admin/logout", &self.address))
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+
     pub async fn post_change_password<Body>(&self, body: &Body) -> reqwest::Response
         where Body: serde::Serialize,
     {
@@ -234,7 +234,9 @@ pub async fn spawn_app() -> TestApp {
     let test_app = TestApp {
         address: format!("http://localhost:{}", application_port),
         port: application_port,
-        db_pool: get_connection_pool(&configuration.database),
+        db_pool: get_connection_pool(&configuration.database)
+            .await
+            .expect("Failed to connect to the database.s"),
         email_server,
         test_user: TestUser::generate(),
         api_client: client,
