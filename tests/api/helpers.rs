@@ -25,6 +25,14 @@ impl TestUser {
             password: "everythinghastostartsomewhere".into(),
         }
     }
+    
+    pub async fn login(&self, app: &TestApp) {
+        app.post_login(&serde_json::json!({
+            "username": &self.username,
+            "password": &self.password
+        }))
+        .await;
+    }
 
     async fn store(&self, pool: &PgPool) {
         let salt = SaltString::generate(&mut rand::thread_rng());
@@ -66,6 +74,7 @@ pub struct ConfirmationLinks {
 }
 
 impl TestApp {
+
     pub async fn get_login_html(&self) -> String {
         self.api_client
             .get(&format!("{}/login", &self.address))
