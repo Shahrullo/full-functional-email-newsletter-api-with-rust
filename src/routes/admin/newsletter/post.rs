@@ -6,7 +6,7 @@ use actix_web_flash_messages::FlashMessage;
 
 use crate::authentication::UserId;
 use crate::domain::SubscriberEmail;
-use crate::idempotency::{get_saved_response, IdempotencyKey, save_response};
+use crate::idempotency::{save_response, try_processing, IdempotencyKey, NextAction};
 use crate::utils::{e500, see_other};
 use crate::email_client::EmailClient;
 
@@ -30,52 +30,41 @@ pub async fn publish_newsletter(
     email_client: web::Data<EmailClient>,
 ) -> Result<HttpResponse, actix_web::Error> {
     let user_id = user_id.into_inner();
-    let FormData { 
-        title, 
-        text_content, 
-        html_content, 
-        idempotency_key 
+    let FormData {
+        title,
+        text_content,
+        html_content,
+        idempotency_key,
     } = form.0;
     let idempotency_key: IdempotencyKey = idempotency_key.try_into().map_err(e400)?;
-    // Return early if have a saved response in the database
-    if let Some(saved_response) = get_saved_response(&pool, &idempotency_key, *user_id)
+    let transaction = match try_processing(&pool, &idempotency_key, *user_id)
         .await
         .map_err(e500)?
     {
-        return Ok(saved_response);
-    }
-    let subscribers = get_confirmed_subscribers(&pool).await.map_err(e500)?;
-    for subscriber in subscribers {
-        match subscriber {
-            Ok(subscriber) => {
-                email_client
-                    .send_email(
-                        &subscriber.email,
-                        &title,
-                        &html_content,
-                        &text_content,
-                    )
-                    .await
-                    .with_context(|| {
-                        format!("Failed to send newsletter issue to {}", subscriber.email)
-                    })
-                    .map_err(e500)?;
-            }
-            Err(error) => {
-                tracing::warn!(
-                    error.cause_chain = ?error,
-                    error.message = %error,
-                    "Skipping a confirmed subscriber. Their stored contact details are invalid",
-                );
-            }
+        NextAction::StartProcessing(t) => t,
+        NextAction::ReturnSavedResponse(saved_response) => {
+            success_message().send();
+            return Ok(saved_response);
         }
-    }
-    FlashMessage::info("The newsletter issue has been published!").send();
+    };
+    let issue_id = insert_newsletter_issue(&mut transaction, &title, &text_content, &html_content)
+        .await
+        .context("Failed to store newsletter issue details")
+        .map_err(e500)?;
+    enqueue_delivery_tasks(&mut transaction, issue_id)
+        .await
+        .context("Failed to enqueue delivery tasks")
+        .map_err(e500)?;
     let response = see_other("/admin/newsletters");
-    let response = save_response(&pool, &idempotency_key, *user_id, response)
+    let response = save_response(transaction, &idempotency_key, *user_id, response)
         .await
         .map_err(e500)?;
+    success_message().send();
     Ok(response)
+}
+
+fn success_message() -> FlashMessage {
+    FlashMessage::info("The newsletter ussue has been published!")
 }
 
 struct ConfirmedSubscriber {
