@@ -4,7 +4,13 @@
 
 |!Documentation will be updated with project along.
 
+## Project description
+
 Project is created based on [actix-web](https://github.com/actix/actix-web) framework.
+
+- Currently two different data sources:
+    - Redis, to store the session state for each user;
+    - Postgres, for everything else
 
 ## Pre-requisites
 - Rust installed -> [link](https://www.rust-lang.org/tools/install)
