@@ -10,3 +10,4 @@ pub mod email_client;
 pub mod session_state;
 pub mod configurations;
 pub mod authentication;
+pub mod issue_delivery_worker;
