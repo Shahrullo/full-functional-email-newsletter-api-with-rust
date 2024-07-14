@@ -1,5 +1,7 @@
 //! src/main.rs
 use anyhow::Ok;
+use tokio::task::JoinError;
+use std::fmt::{Debug, Display};
 use email_newsletter::startup::Application;
 use email_newsletter::configurations::get_configuration;
 use email_newsletter::telemetry::{get_subscriber, init_subscriber};
@@ -16,14 +18,42 @@ async fn main() -> anyhow::Result<()> {
     
 
     let application = Application::build(configuration.clone())
-        .await?
-        .run_until_stopped();
-    let worker = run_worker_until_stopped(configurations);
+        .await?;
+    
+    let application_task = tokio::spawn(application.run_until_stopped());
+    let worker_task = tokio::spawn(run_worker_until_stopped(configurations));
 
     tokio::select! {
-        _ = application => {},
-        _ = worker => {},
+        o = application_task => report_exit("API", o),
+        o = worker_task => report_exit("Background worker", o),
     };
 
     Ok(())
+}
+
+fn report_exit(
+    task_name: &str,
+    outcome: Result<Result<(), impl Debug + Display>, JoinError>
+) {
+    match outcome {
+        Ok(Ok(())) => {
+            tracing::info!("{} has exited", task_name)
+        }
+        Ok(Err(e)) => {
+            tracing::error!(
+                error.cause_chain = ?e,
+                error.message = %e,
+                "{} falied",
+                task_name
+            )
+        }
+        Err(e) => {
+            tracing::error!(
+                error.cause_chain = ?e,
+                error.message = %e,
+                "{}' task failed to complete",
+                task_name
+            )
+        }
+    }
 }
