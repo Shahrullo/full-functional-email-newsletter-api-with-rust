@@ -8,6 +8,7 @@ use sqlx::{PgPool, Connection, Executor, PgConnection};
 use email_newsletter::startup::{Application, get_connection_pool};
 use email_newsletter::telemetry::{get_subscriber, init_subscriber};
 use email_newsletter::configurations::{get_configuration, DatabaseSettings};
+use email_newsletter::email_client::EmailClient;
 
 
 pub struct TestUser {
@@ -65,7 +66,8 @@ pub struct TestApp {
     pub db_pool: PgPool,
     pub email_server: MockServer,
     pub test_user: TestUser,
-    pub api_client: reqwest::Client
+    pub api_client: reqwest::Client,
+    pub email_client: EmailClient
 }
 
 pub struct ConfirmationLinks {
@@ -273,6 +275,7 @@ pub async fn spawn_app() -> TestApp {
         email_server,
         test_user: TestUser::generate(),
         api_client: client,
+        email_client: configuration.email_client.client()
     };
     test_app.test_user.store(&test_app.db_pool).await;
     test_app
