@@ -9,7 +9,7 @@ use crate::domain::SubscriberEmail;
 use crate::email_client::EmailClient;
 use crate::{configurations::Settings, startup::get_connection_pool};
 
-enum ExecutionOutcome {
+pub enum ExecutionOutcome {
     TaskCompleted,
     EmptyQueue,
 }
@@ -22,7 +22,7 @@ enum ExecutionOutcome {
     ),
     err
 )]
-async fn try_execute_task(
+pub async fn try_execute_task(
     pool: &PgPool,
     email_client: &EmailClient
 ) -> Result<ExecutionOutcome, anyhow::Error> {
@@ -167,6 +167,9 @@ pub async fn run_worker_until_stopped(
     configurations: Settings
 ) -> Result<(), anyhow::Error> {
     let connection_pool = get_connection_pool(&configuration.database);
+    // helper function here
+    let email_client = configurations.email_client.client();
+    worker_loop(connection_pool, email_client).await
 
     let sender_email = configurations
         .email_client

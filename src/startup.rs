@@ -34,9 +34,9 @@ pub struct Application {
 
 impl Application {
     pub async fn build(configuration: Settings) -> Result<Self, anyhow::Error> {
-        let connection_pool = get_connection_pool(&configuration.database)
-            .await
-            .expect("Failed to connect to Postgres.");
+        let connection_pool = get_connection_pool(&configuration.database);
+        // helper function here
+        let email_client = configuration.email_client.client();
 
         let sender_email = configuration
             .email_client
