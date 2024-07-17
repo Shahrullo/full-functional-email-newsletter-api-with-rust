@@ -21,10 +21,9 @@ use crate::routes::{
 };
 
 
-pub async fn get_connection_pool(configuration: &DatabaseSettings) -> Result<PgPool, sqlx::Error> {
+pub fn get_connection_pool(configuration: &DatabaseSettings) -> PgPool {
     PgPoolOptions::new()
-        .connect_with(configuration.with_db())
-        .await
+        .connect_lazy_with(configuration.with_db())
 }
 
 pub struct Application {
@@ -37,18 +36,6 @@ impl Application {
         let connection_pool = get_connection_pool(&configuration.database);
         // helper function here
         let email_client = configuration.email_client.client();
-
-        let sender_email = configuration
-            .email_client
-            .sender()
-            .expect("Invalid sender email address.");
-        let timeout = configuration.email_client.timeout();
-        let email_client = EmailClient::new(
-            configuration.email_client.base_url,
-            sender_email,
-            configuration.email_client.authorization_token,
-            timeout,
-        );
 
         let address = format!(
             "{}:{}",

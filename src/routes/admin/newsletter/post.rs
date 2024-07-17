@@ -2,14 +2,13 @@ use uuid::Uuid;
 use anyhow::Ok;
 use actix_web::web::ReqData;
 use actix_web::{web, HttpResponse};
-use sqlx::{PgPool, Postgres, Transaction};
+use sqlx::{Executor, PgPool, Postgres, Transaction};
 use actix_web_flash_messages::FlashMessage;
 
 use crate::authentication::UserId;
 use crate::domain::SubscriberEmail;
 use crate::idempotency::{save_response, try_processing, IdempotencyKey, NextAction};
-use crate::utils::{e500, see_other};
-use crate::email_client::EmailClient;
+use crate::utils::{e400, e500, see_other};
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
@@ -27,7 +26,7 @@ async fn insert_newsletter_issue(
     html_content: &str,
 ) -> Result<Uuid, sqlx::Error> {
     let newsletter_issue_id = Uuid::new_v4();
-    sqlx::query!(
+    let query = sqlx::query!(
         r#"
         INSERT INTO newsletter_issues (
             newsletter_issue_id,
@@ -42,10 +41,8 @@ async fn insert_newsletter_issue(
         title,
         text_content,
         html_content
-    )
-    .execute(transaction)
-    .await?;
-
+    );
+    transaction.execute(query).await?;
     Ok(newsletter_issue_id)
 }
 
@@ -101,34 +98,13 @@ struct ConfirmedSubscriber {
     email: SubscriberEmail,
 }
 
-#[tracing::instrument(name = "Get confirmed subscribers", skip(pool))]
-async fn get_confirmed_subscribers(
-    pool: &PgPool,
-) -> Result<Vec<Result<ConfirmedSubscriber, anyhow::Error>>, anyhow::Error> {
-    let confirmed_subscribers = sqlx::query!(
-        r#"
-        SELECT email
-        FROM subscriptions
-        WHERE status = 'confirmed'
-        "#,
-    )
-    .fetch_all(pool)
-    .await?
-    .into_iter()
-    .map(|r| match SubscriberEmail::parse(r.email) {
-        Ok(email) => Ok(ConfirmedSubscriber { email }),
-        Err(error) => Err(anyhow::anyhow!(error)),
-    })
-    .collect();
-    Ok(confirmed_subscribers)
-}
 
 #[tracing::instrument(skip_all)]
 async fn enqueue_delivery_tasks(
     transaction: &mut Transaction<'_, Postgres>,
     newsletter_issue_id: Uuid,
 ) -> Result<(), sqlx::Error> {
-    sqlx::query!(
+    let query = sqlx::query!(
         r#"
         INSERT INTO issue_delivery_queue (
             newsletter_issue_id,
@@ -139,9 +115,7 @@ async fn enqueue_delivery_tasks(
         WHERE status = 'confirmed'
         "#,
         newsletter_issue_id,
-    )
-    .execute(transaction)
-    .await?;
-
+    );
+    transaction.execute(query).await?;
     Ok(())
 }

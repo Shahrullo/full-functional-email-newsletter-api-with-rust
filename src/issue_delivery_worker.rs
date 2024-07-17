@@ -1,10 +1,9 @@
 use anyhow::Ok;
 use uuid::Uuid;
-use std::any;
 use std::time::Duration;
 use tracing::{field::display, Span};
 use sqlx::{PgPool, Postgres, Transaction};
-use crate::configurations;
+
 use crate::domain::SubscriberEmail;
 use crate::email_client::EmailClient;
 use crate::{configurations::Settings, startup::get_connection_pool};
@@ -18,7 +17,7 @@ pub enum ExecutionOutcome {
     skip_all,
     fields(
         newsletter_issue_id=tracing::field::Empty,
-        subscriber_email=tracing::field::Empty,
+        subscriber_email=tracing::field::Empty
     ),
     err
 )]
@@ -31,41 +30,39 @@ pub async fn try_execute_task(
         return Ok(ExecutionOutcome::EmptyQueue);
     }
     let (transaction, issue_id, email) = task.unwrap();
-    if let Some((transaction, issue_id, email)) = deque_task(pool).await? {
-        Span::current()
-            .record("newsletter_issue_id", &display(issue_id))
-            .record("subscriber_email", &display(&email));
-        match SubscriberEmail::parse(email.clone()) {
-            Ok(email) => {
-                let issue = get_issue(pool, issue_id).await?;
-                if let Err(e) = email_client
-                    .send_email(
-                        &email, 
-                        &issue.title, 
-                        &issue.html_content, 
-                        &issue.text_content
-                    )
-                    .await
-                {
-                    tracing::error!(
-                        error.cause_chain = ?e,
-                        error.message = %e,
-                        "Failed to deliver issue to a confirmed subscriber. \
-                        Skipping.",
-                    );
-                }
-            }
-            Err(e) => {
+    Span::current()
+        .record("newsletter_issue_id", &display(issue_id))
+        .record("subscriber_email", &display(&email));
+    match SubscriberEmail::parse(email.clone()) {
+        Ok(email) => {
+            let issue = get_issue(pool, issue_id).await?;
+            if let Err(e) = email_client
+                .send_email(
+                    &email, 
+                    &issue.title, 
+                    &issue.html_content, 
+                    &issue.text_content
+                )
+                .await
+            {
                 tracing::error!(
                     error.cause_chain = ?e,
                     error.message = %e,
-                    "Skipping a confirmed subscriber. \
-                    Their stored contact details are invalid",
+                    "Failed to deliver issue to a confirmed subscriber. \
+                    Skipping.",
                 );
             }
         }
-        delete_task(transaction, issue_id, &email).await?;
+        Err(e) => {
+            tracing::error!(
+                error.cause_chain = ?e,
+                error.message = %e,
+                "Skipping a confirmed subscriber. \
+                Their stored contact details are invalid",
+            );
+        }
     }
+    delete_task(transaction, issue_id, &email).await?;
     Ok(ExecutionOutcome::TaskCompleted)
 }
 
@@ -148,7 +145,7 @@ async fn get_issue(
 
 async fn worker_loop(
     pool: PgPool,
-    email_client: &EmailClient
+    email_client: EmailClient
 ) -> Result<(), anyhow::Error> {
     loop {
         match try_execute_task(&pool, &email_client).await {
@@ -163,25 +160,8 @@ async fn worker_loop(
     }
 }
 
-pub async fn run_worker_until_stopped(
-    configurations: Settings
-) -> Result<(), anyhow::Error> {
+pub async fn run_worker_until_stopped(configuration: Settings) -> Result<(), anyhow::Error> {
     let connection_pool = get_connection_pool(&configuration.database);
-    // helper function here
-    let email_client = configurations.email_client.client();
-    worker_loop(connection_pool, email_client).await
-
-    let sender_email = configurations
-        .email_client
-        .sender()
-        .expect("Invalid sender email address.");
-
-    let timeout = configurations.email_client.timeout();
-    let email_client = EmailClient::new(
-        configurations.email_client.base_url, 
-        sender_email, 
-        configurations.email_client.authorization_token, 
-        timeout,
-    );
+    let email_client = configuration.email_client.client();
     worker_loop(connection_pool, email_client).await
 }
