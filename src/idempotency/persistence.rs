@@ -1,9 +1,8 @@
-use anyhow::Ok;
-use reqwest::StatusCode;
 use uuid::Uuid;
 use super::IdempotencyKey;
 use actix_web::HttpResponse;
 use actix_web::body::to_bytes;
+use actix_web::http::StatusCode;
 use sqlx::postgres::PgHasArrayType;
 use sqlx::{PgPool, Postgres, Transaction};
 
@@ -114,33 +113,29 @@ pub enum NextAction {
 pub async fn try_processing(
     pool: &PgPool,
     idempotency_key: &IdempotencyKey,
-    user_id: Uuid
+    user_id: Uuid,
 ) -> Result<NextAction, anyhow::Error> {
     let mut transaction = pool.begin().await?;
-    let n_inserted_rows = sqlx::query!(
-            r#"
-            INSERT INTO idempotency (
-                user_id,
-                idempotency_key,
-                created_at
-            )
-            VALUES ($1, $2, now())
-            ON CONFLICT DO NOTHING
-            "#,
-            user_id,
-            idempotency_key.as_ref()
-        )
-        .execute(&mut transaction)
-        .await?
-        .rows_affected();
+    let query = sqlx::query!(
+        r#"
+        INSERT INTO idempotency (
+            user_id, 
+            idempotency_key,
+            created_at
+        ) 
+        VALUES ($1, $2, now()) 
+        ON CONFLICT DO NOTHING
+        "#,
+        user_id,
+        idempotency_key.as_ref()
+    );
+    let n_inserted_rows = transaction.execute(query).await?.rows_affected();
     if n_inserted_rows > 0 {
         Ok(NextAction::StartProcessing(transaction))
     } else {
         let saved_response = get_saved_response(pool, idempotency_key, user_id)
             .await?
-            .ok_or_else(||
-                anyhow::anyhow!("We expected a saved response, we didn't find it")
-            )?;
+            .ok_or_else(|| anyhow::anyhow!("We expected a saved response, we didn't find it"))?;
         Ok(NextAction::ReturnSavedResponse(saved_response))
     }
 }

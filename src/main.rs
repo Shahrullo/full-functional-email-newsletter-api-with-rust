@@ -1,5 +1,4 @@
 //! src/main.rs
-use anyhow::Ok;
 use tokio::task::JoinError;
 use std::fmt::{Debug, Display};
 use email_newsletter::startup::Application;

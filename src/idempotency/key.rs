@@ -1,5 +1,3 @@
-use anyhow::Ok;
-
 #[derive(Debug)]
 pub struct IdempotencyKey(String);
 

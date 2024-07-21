@@ -1,5 +1,4 @@
 use uuid::Uuid;
-use anyhow::Ok;
 use actix_web::web::ReqData;
 use actix_web::{web, HttpResponse};
 use sqlx::{Executor, PgPool, Postgres, Transaction};

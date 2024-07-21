@@ -1,4 +1,3 @@
-use anyhow::Ok;
 use uuid::Uuid;
 use std::time::Duration;
 use tracing::{field::display, Span};
@@ -25,7 +24,7 @@ pub async fn try_execute_task(
     pool: &PgPool,
     email_client: &EmailClient
 ) -> Result<ExecutionOutcome, anyhow::Error> {
-    let task = deque_task(pool).await?;
+    let task = dequeue_task(pool).await?;
     if task.is_none() {
         return Ok(ExecutionOutcome::EmptyQueue);
     }
@@ -69,7 +68,7 @@ pub async fn try_execute_task(
 type PgTransaction = Transaction<'static, Postgres>;
 
 #[tracing::instrument(skip_all)]
-async fn deque_task(
+async fn dequeue_task(
     pool: &PgPool,
 ) -> Result<Option<(PgTransaction, Uuid, String)>, anyhow::Error> {
     let mut transaction = pool.begin().await?;
@@ -82,7 +81,7 @@ async fn deque_task(
         LIMIT 1
         "#,
     )
-    .fetch_optional(&mut transaction)
+    .fetch_optional(&mut *transaction)
     .await?;
     if let Some(r) = r {
         Ok(Some((
@@ -111,7 +110,7 @@ async fn delete_task(
         issue_id,
         email
     )
-    .execute(&mut transaction)
+    .execute(&mut *transaction)
     .await?;
     transaction.commit().await?;
     Ok(())
